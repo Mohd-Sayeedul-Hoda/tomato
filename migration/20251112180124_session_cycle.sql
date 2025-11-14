@@ -7,7 +7,7 @@ CREATE TABLE session_cycles(
   start_time DATETIME,
   end_time DATETIME,
   duration INTEGER,
-  status TEXT CHECK(status IN ('completed', 'skipped', 'cancelled'))
+  status TEXT CHECK(status IN ('completed', 'running', 'skipped', 'cancelled' ))
 );
 -- +goose StatementEnd
 

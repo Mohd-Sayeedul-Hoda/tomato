@@ -7,32 +7,15 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"time"
 )
-
-func getSocketPath() (string, error) {
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	socketDir := filepath.Join(homeDir, ".local", "share", "tomato")
-	if err := os.MkdirAll(socketDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create socket directory: %w", err)
-	}
-
-	return filepath.Join(socketDir, "tomato.sock"), nil
-
-}
 
 func Serve() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	socketPath, err := getSocketPath()
+	socketPath, err := GetSocketPath()
 	if err != nil {
 		return err
 	}
@@ -86,9 +69,4 @@ func Serve() error {
 
 	os.Remove(socketPath)
 	return nil
-}
-
-func handleConn(conn net.Conn, wg *sync.WaitGroup) {
-	defer wg.Done()
-	defer conn.Close()
 }

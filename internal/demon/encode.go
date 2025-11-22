@@ -8,13 +8,6 @@ import (
 	"strings"
 )
 
-type Request struct {
-	Method string          `json:"method"`
-	Data   json.RawMessage `json:"data"`
-}
-
-type envelope map[string]any
-
 var ErrInvalidData = errors.New("invalid data")
 var ErrInvalidRequest = errors.New("invalid request")
 

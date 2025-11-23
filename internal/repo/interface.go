@@ -26,9 +26,11 @@ type SessionRepository interface {
 type SessionCycleRepository interface {
 	CreateSessionCycle(ctx context.Context, cycle models.SessionCycle) (int64, error)
 	GetSessionCycleByID(ctx context.Context, id int64) (*models.SessionCycle, error)
+	GetSessionCycleByStatusWithMetadata(ctx context.Context, status string) ([]*models.SessionCycleWithMetadata, error)
 	GetSessionCyclesBySessionID(ctx context.Context, sessionID int64) ([]*models.SessionCycle, error)
 	GetSessionCyclesByStatus(ctx context.Context, status string) ([]*models.SessionCycle, error)
 	GetSessionCyclesByType(ctx context.Context, cycleType string) ([]*models.SessionCycle, error)
+	GetLatestSessionCycleByStatus(ctx context.Context, status string) (*models.SessionCycle, error)
 	UpdateSessionCycleStatus(ctx context.Context, id int64, status string) error
 	MarkSessionCycleComplete(ctx context.Context, id int64, status string, endTime time.Time, duration int64) error
 	MarkSessionCycleCompleted(ctx context.Context, id int64) error

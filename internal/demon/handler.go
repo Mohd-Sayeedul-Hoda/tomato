@@ -2,9 +2,9 @@ package demon
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
-	"sync"
+
+	repo "github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo"
 )
 
 type Request struct {
@@ -12,35 +12,8 @@ type Request struct {
 	Data   json.RawMessage `json:"data"`
 }
 
-func handleConn(conn net.Conn, wg *sync.WaitGroup) {
-	defer wg.Done()
-	defer conn.Close()
-
-	recoverPanic(manageConn())(conn)
-}
-
-func manageConn() HandleConn {
-	return HandleConn(func(conn net.Conn) {
-
-		var req Request
-		err := Decode(conn, &req)
-		if err != nil {
-			switch {
-			case errors.Is(err, ErrInvalidRequest):
-				errorResponse(conn, "NONE", 400, err.Error())
-			default:
-				ServerErrorResponse(conn, "NONE", err)
-			}
-			return
-		}
-
-		switch req.Method {
-		case "STATUS":
-			healthCheck(conn, req)
-		default:
-			notFound(conn)
-		}
-	})
+type startTimerReq struct {
+	Temp bool `json:"temp"`
 }
 
 func healthCheck(conn net.Conn, req Request) {
@@ -59,4 +32,8 @@ func notFound(conn net.Conn) {
 	}
 
 	respondWithJSON(conn, "NOT_FOUND", 400, resp)
+}
+
+func startSession(conn net.Conn, sessRepo repo.SessionRepository, sessCycleRepo repo.SessionCycleRepository, req Request) {
+
 }

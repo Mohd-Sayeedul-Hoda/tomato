@@ -2,6 +2,7 @@ package demon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -9,11 +10,30 @@ import (
 	"os/signal"
 	"sync"
 	"time"
+
+	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/db"
+	repo "github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo"
+	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo/sqlite"
 )
 
 func Serve() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	db, err := db.OpenSqliteConnection()
+	if err != nil {
+		return err
+	}
+
+	sessionRepo, err := sqlite.NewSessionRepository(db)
+	if err != nil {
+		return err
+	}
+
+	sessCycleRepo, err := sqlite.NewSessionCycleRepository(db)
+	if err != nil {
+		return err
+	}
 
 	socketPath, err := GetSocketPath()
 	if err != nil {
@@ -41,7 +61,7 @@ func Serve() error {
 				return
 			}
 			wg.Add(1)
-			go handleConn(conn, &wg)
+			go handleConn(conn, &wg, sessionRepo, sessCycleRepo)
 		}
 	}()
 
@@ -69,4 +89,42 @@ func Serve() error {
 
 	os.Remove(socketPath)
 	return nil
+}
+
+func handleConn(conn net.Conn, wg *sync.WaitGroup, sessionRepo repo.SessionRepository, sessCycleRepo repo.SessionCycleRepository) {
+	defer wg.Done()
+	defer conn.Close()
+
+	defer func() {
+		if err := recover(); err != nil {
+			ServerErrorResponse(conn, "NONE", fmt.Errorf("%s", err))
+			conn.Close()
+		}
+	}()
+	manageConn(conn, sessionRepo, sessCycleRepo)
+}
+
+func manageConn(conn net.Conn, sessionRepo repo.SessionRepository, sessCycleRepo repo.SessionCycleRepository) {
+
+	var req Request
+	err := Decode(conn, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidRequest):
+			errorResponse(conn, "NONE", 400, err.Error())
+		default:
+			ServerErrorResponse(conn, "NONE", err)
+		}
+		return
+	}
+
+	switch req.Method {
+	case "STATUS":
+		healthCheck(conn, req)
+	case "START"
+		startSession(conn, )
+
+	default:
+		notFound(conn)
+	}
 }

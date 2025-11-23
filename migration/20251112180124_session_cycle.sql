@@ -4,6 +4,7 @@ CREATE TABLE session_cycles(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   type TEXT CHECK(type IN ('work', 'break', 'long_break')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   start_time DATETIME,
   end_time DATETIME,
   duration INTEGER,

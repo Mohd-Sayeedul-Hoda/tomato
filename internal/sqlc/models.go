@@ -29,6 +29,7 @@ type SessionCycle struct {
 	ID        int64
 	SessionID int64
 	Type      sql.NullString
+	CreatedAt sql.NullTime
 	StartTime sql.NullTime
 	EndTime   sql.NullTime
 	Duration  sql.NullInt64

@@ -3,23 +3,28 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/models"
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/sqlc"
 )
 
-type SessionRepo struct {
+type sessionRepo struct {
 	queries *sqlc.Queries
 }
 
-func NewSessionRepository(db *sql.DB) *SessionRepo {
-	return &SessionRepo{
-		queries: sqlc.New(db),
+func NewSessionRepository(db *sql.DB) (*sessionRepo, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection cannot be nil")
 	}
+
+	return &sessionRepo{
+		queries: sqlc.New(db),
+	}, nil
 }
 
-func (s *SessionRepo) CreateSession(ctx context.Context, session models.Session) (int64, error) {
+func (s *sessionRepo) CreateSession(ctx context.Context, session models.Session) (int64, error) {
 	params := sqlc.CreateSessionParams{
 		Label:             session.Label,
 		Note:              sql.NullString{String: "", Valid: false},
@@ -53,82 +58,82 @@ func (s *SessionRepo) CreateSession(ctx context.Context, session models.Session)
 	return id, nil
 }
 
-func (s *SessionRepo) GetSessionByID(ctx context.Context, id int64) (models.Session, error) {
+func (s *sessionRepo) GetSessionByID(ctx context.Context, id int64) (*models.Session, error) {
 	session, err := s.queries.GetSessionById(ctx, id)
 	if err != nil {
-		return models.Session{}, err
+		return nil, err
 	}
 	return s.mapSQLCSessionToModel(session), nil
 }
 
-func (s *SessionRepo) GetAllSessions(ctx context.Context) ([]models.Session, error) {
+func (s *sessionRepo) GetAllSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetAllSessions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Session, len(sessions))
+	result := make([]*models.Session, len(sessions))
 	for i, session := range sessions {
 		result[i] = s.mapSQLCSessionToModel(session)
 	}
 	return result, nil
 }
 
-func (s *SessionRepo) GetActiveSessions(ctx context.Context) ([]models.Session, error) {
+func (s *sessionRepo) GetActiveSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetActiveSessions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Session, len(sessions))
+	result := make([]*models.Session, len(sessions))
 	for i, session := range sessions {
 		result[i] = s.mapSQLCSessionToModel(session)
 	}
 	return result, nil
 }
 
-func (s *SessionRepo) GetCompletedSessions(ctx context.Context) ([]models.Session, error) {
+func (s *sessionRepo) GetCompletedSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetCompletedSessions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Session, len(sessions))
+	result := make([]*models.Session, len(sessions))
 	for i, session := range sessions {
 		result[i] = s.mapSQLCSessionToModel(session)
 	}
 	return result, nil
 }
 
-func (s *SessionRepo) GetSessionsByTrackedStatus(ctx context.Context, isTracked bool) ([]models.Session, error) {
+func (s *sessionRepo) GetSessionsByTrackedStatus(ctx context.Context, isTracked bool) ([]*models.Session, error) {
 	sqlNullBool := sql.NullBool{Bool: isTracked, Valid: true}
 	sessions, err := s.queries.GetSessionsByTrackedStatus(ctx, sqlNullBool)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Session, len(sessions))
+	result := make([]*models.Session, len(sessions))
 	for i, session := range sessions {
 		result[i] = s.mapSQLCSessionToModel(session)
 	}
 	return result, nil
 }
 
-func (s *SessionRepo) GetSessionsForDate(ctx context.Context, date time.Time) ([]models.Session, error) {
+func (s *sessionRepo) GetSessionsForDate(ctx context.Context, date time.Time) ([]*models.Session, error) {
 	sqlNullTime := sql.NullTime{Time: date, Valid: true}
 	sessions, err := s.queries.GetSessionsForDate(ctx, sqlNullTime)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Session, len(sessions))
+	result := make([]*models.Session, len(sessions))
 	for i, session := range sessions {
 		result[i] = s.mapSQLCSessionToModel(session)
 	}
 	return result, nil
 }
 
-func (s *SessionRepo) UpdateSession(ctx context.Context, session models.Session) error {
+func (s *sessionRepo) UpdateSession(ctx context.Context, session models.Session) error {
 	params := sqlc.UpdateSessionParams{
 		ID:                session.ID,
 		Label:             session.Label,
@@ -163,7 +168,7 @@ func (s *SessionRepo) UpdateSession(ctx context.Context, session models.Session)
 	return s.queries.UpdateSession(ctx, params)
 }
 
-func (s *SessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status string) error {
+func (s *sessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status string) error {
 	params := sqlc.UpdateSessionStatusParams{
 		ID:     id,
 		Status: status,
@@ -171,7 +176,7 @@ func (s *SessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status 
 	return s.queries.UpdateSessionStatus(ctx, params)
 }
 
-func (s *SessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTime time.Time) error {
+func (s *sessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTime time.Time) error {
 	params := sqlc.UpdateSessionEndTimeParams{
 		ID:      id,
 		EndTime: sql.NullTime{Time: endTime, Valid: true},
@@ -179,7 +184,7 @@ func (s *SessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTim
 	return s.queries.UpdateSessionEndTime(ctx, params)
 }
 
-func (s *SessionRepo) UpdateSessionNote(ctx context.Context, id int64, note string) error {
+func (s *sessionRepo) UpdateSessionNote(ctx context.Context, id int64, note string) error {
 	params := sqlc.UpdateSessionNoteParams{
 		ID:   id,
 		Note: sql.NullString{String: note, Valid: true},
@@ -187,16 +192,16 @@ func (s *SessionRepo) UpdateSessionNote(ctx context.Context, id int64, note stri
 	return s.queries.UpdateSessionNote(ctx, params)
 }
 
-func (s *SessionRepo) DeleteSession(ctx context.Context, id int64) error {
+func (s *sessionRepo) DeleteSession(ctx context.Context, id int64) error {
 	return s.queries.DeleteSession(ctx, id)
 }
 
-func (s *SessionRepo) MarkSessionCompleted(ctx context.Context, id int64) error {
+func (s *sessionRepo) MarkSessionCompleted(ctx context.Context, id int64) error {
 	return s.queries.MarkSessionCompleted(ctx, id)
 }
 
-func (s *SessionRepo) mapSQLCSessionToModel(session sqlc.Session) models.Session {
-	result := models.Session{
+func (s *sessionRepo) mapSQLCSessionToModel(session sqlc.Session) *models.Session {
+	result := &models.Session{
 		ID:                session.ID,
 		Label:             session.Label,
 		WorkDuration:      session.WorkDuration,
@@ -227,4 +232,3 @@ func (s *SessionRepo) mapSQLCSessionToModel(session sqlc.Session) models.Session
 
 	return result
 }
-

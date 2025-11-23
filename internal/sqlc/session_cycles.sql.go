@@ -45,8 +45,31 @@ func (q *Queries) DeleteSessionCycle(ctx context.Context, id int64) error {
 	return err
 }
 
+const getLatestSessionCycleByStatus = `-- name: GetLatestSessionCycleByStatus :one
+SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+WHERE status = ?1
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestSessionCycleByStatus(ctx context.Context, status sql.NullString) (SessionCycle, error) {
+	row := q.db.QueryRowContext(ctx, getLatestSessionCycleByStatus, status)
+	var i SessionCycle
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.Type,
+		&i.CreatedAt,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Duration,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getSessionCycleByID = `-- name: GetSessionCycleByID :one
-SELECT id, session_id, type, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE id = ?1
 `
 
@@ -57,6 +80,7 @@ func (q *Queries) GetSessionCycleByID(ctx context.Context, id int64) (SessionCyc
 		&i.ID,
 		&i.SessionID,
 		&i.Type,
+		&i.CreatedAt,
 		&i.StartTime,
 		&i.EndTime,
 		&i.Duration,
@@ -65,8 +89,82 @@ func (q *Queries) GetSessionCycleByID(ctx context.Context, id int64) (SessionCyc
 	return i, err
 }
 
+const getSessionCycleByStatusWithMetadata = `-- name: GetSessionCycleByStatusWithMetadata :many
+SELECT
+    sc.id,
+    sc.session_id,
+    sc.type,
+    sc.created_at,
+    sc.start_time,
+    sc.end_time,
+    sc.duration,
+    sc.status,
+
+    s.work_duration,
+    s.break_duration,
+    s.long_break_duration,
+    s.long_break_cycle
+FROM
+    session_cycles AS sc
+INNER JOIN
+    sessions AS s ON sc.session_id = s.id
+WHERE
+    sc.status = ?1
+`
+
+type GetSessionCycleByStatusWithMetadataRow struct {
+	ID                int64
+	SessionID         int64
+	Type              sql.NullString
+	CreatedAt         sql.NullTime
+	StartTime         sql.NullTime
+	EndTime           sql.NullTime
+	Duration          sql.NullInt64
+	Status            sql.NullString
+	WorkDuration      int64
+	BreakDuration     int64
+	LongBreakDuration int64
+	LongBreakCycle    sql.NullInt64
+}
+
+func (q *Queries) GetSessionCycleByStatusWithMetadata(ctx context.Context, status sql.NullString) ([]GetSessionCycleByStatusWithMetadataRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSessionCycleByStatusWithMetadata, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSessionCycleByStatusWithMetadataRow
+	for rows.Next() {
+		var i GetSessionCycleByStatusWithMetadataRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.Type,
+			&i.CreatedAt,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Duration,
+			&i.Status,
+			&i.WorkDuration,
+			&i.BreakDuration,
+			&i.LongBreakDuration,
+			&i.LongBreakCycle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSessionCyclesBySessionID = `-- name: GetSessionCyclesBySessionID :many
-SELECT id, session_id, type, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE session_id = ?1
 ORDER BY id
 `
@@ -84,6 +182,7 @@ func (q *Queries) GetSessionCyclesBySessionID(ctx context.Context, sessionID int
 			&i.ID,
 			&i.SessionID,
 			&i.Type,
+			&i.CreatedAt,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Duration,
@@ -103,7 +202,7 @@ func (q *Queries) GetSessionCyclesBySessionID(ctx context.Context, sessionID int
 }
 
 const getSessionCyclesByStatus = `-- name: GetSessionCyclesByStatus :many
-SELECT id, session_id, type, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE status = ?1
 `
 
@@ -120,6 +219,7 @@ func (q *Queries) GetSessionCyclesByStatus(ctx context.Context, status sql.NullS
 			&i.ID,
 			&i.SessionID,
 			&i.Type,
+			&i.CreatedAt,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Duration,
@@ -139,7 +239,7 @@ func (q *Queries) GetSessionCyclesByStatus(ctx context.Context, status sql.NullS
 }
 
 const getSessionCyclesByType = `-- name: GetSessionCyclesByType :many
-SELECT id, session_id, type, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE type = ?1
 `
 
@@ -156,6 +256,7 @@ func (q *Queries) GetSessionCyclesByType(ctx context.Context, type_ sql.NullStri
 			&i.ID,
 			&i.SessionID,
 			&i.Type,
+			&i.CreatedAt,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Duration,

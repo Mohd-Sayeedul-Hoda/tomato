@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 )
 
-type HandleConn func(conn net.Conn)
-
 func GetSocketPath() (string, error) {
 
 	homeDir, err := os.UserHomeDir()
@@ -22,16 +20,4 @@ func GetSocketPath() (string, error) {
 	}
 
 	return filepath.Join(socketDir, "tomato.sock"), nil
-}
-
-func recoverPanic(next HandleConn) HandleConn {
-	return func(conn net.Conn) {
-		defer func() {
-			if err := recover(); err != nil {
-				ServerErrorResponse(conn, "NONE", fmt.Errorf("%s", err))
-				conn.Close()
-			}
-		}()
-		next(conn)
-	}
 }

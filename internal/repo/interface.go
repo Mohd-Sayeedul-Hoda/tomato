@@ -4,7 +4,14 @@ import (
 	"context"
 	"time"
 
+	"errors"
+
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/models"
+)
+
+var (
+	ErrUniqueViolation = errors.New("unique key violation in db")
+	ErrNotFound        = errors.New("record not found")
 )
 
 type SessionRepository interface {

@@ -3,10 +3,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/models"
+	repo "github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo"
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/sqlc"
 )
 
@@ -44,7 +46,7 @@ func (s *sessionCycleRepo) CreateSessionCycle(ctx context.Context, cycle models.
 
 	id, err := s.queries.CreateSessionCycle(ctx, params)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to create session cycle: %w", err)
 	}
 	return id, nil
 }
@@ -52,7 +54,10 @@ func (s *sessionCycleRepo) CreateSessionCycle(ctx context.Context, cycle models.
 func (s *sessionCycleRepo) GetSessionCycleByID(ctx context.Context, id int64) (*models.SessionCycle, error) {
 	cycle, err := s.queries.GetSessionCycleByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, repo.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get session cycle by id: %w", err)
 	}
 	return s.mapSQLCSessionCycleToModel(cycle), nil
 }
@@ -60,7 +65,7 @@ func (s *sessionCycleRepo) GetSessionCycleByID(ctx context.Context, id int64) (*
 func (s *sessionCycleRepo) GetSessionCyclesBySessionID(ctx context.Context, sessionID int64) ([]*models.SessionCycle, error) {
 	cycles, err := s.queries.GetSessionCyclesBySessionID(ctx, sessionID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session cycles by session id: %w", err)
 	}
 
 	result := make([]*models.SessionCycle, len(cycles))
@@ -74,7 +79,7 @@ func (s *sessionCycleRepo) GetSessionCyclesByStatus(ctx context.Context, status 
 	sqlNullString := sql.NullString{String: status, Valid: true}
 	cycles, err := s.queries.GetSessionCyclesByStatus(ctx, sqlNullString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session cycles by status: %w", err)
 	}
 
 	result := make([]*models.SessionCycle, len(cycles))
@@ -88,7 +93,7 @@ func (s *sessionCycleRepo) GetSessionCyclesByType(ctx context.Context, cycleType
 	sqlNullString := sql.NullString{String: cycleType, Valid: true}
 	cycles, err := s.queries.GetSessionCyclesByType(ctx, sqlNullString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session cycles by type: %w", err)
 	}
 
 	result := make([]*models.SessionCycle, len(cycles))
@@ -103,7 +108,10 @@ func (s *sessionCycleRepo) UpdateSessionCycleStatus(ctx context.Context, id int6
 		ID:     id,
 		Status: sql.NullString{String: status, Valid: true},
 	}
-	return s.queries.UpdateSessionCycleStatus(ctx, params)
+	if err := s.queries.UpdateSessionCycleStatus(ctx, params); err != nil {
+		return fmt.Errorf("failed to update session cycle status: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionCycleRepo) MarkSessionCycleComplete(ctx context.Context, id int64, status string, endTime time.Time, duration int64) error {
@@ -113,22 +121,34 @@ func (s *sessionCycleRepo) MarkSessionCycleComplete(ctx context.Context, id int6
 		EndTime:  sql.NullTime{Time: endTime, Valid: true},
 		Duration: sql.NullInt64{Int64: duration, Valid: true},
 	}
-	return s.queries.MarkSessionCycleComplete(ctx, params)
+	if err := s.queries.MarkSessionCycleComplete(ctx, params); err != nil {
+		return fmt.Errorf("failed to mark session cycle complete: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionCycleRepo) MarkSessionCycleCompleted(ctx context.Context, id int64) error {
-	return s.queries.MarkSessionCycleCompleted(ctx, id)
+	if err := s.queries.MarkSessionCycleCompleted(ctx, id); err != nil {
+		return fmt.Errorf("failed to mark session cycle completed: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionCycleRepo) DeleteSessionCycle(ctx context.Context, id int64) error {
-	return s.queries.DeleteSessionCycle(ctx, id)
+	if err := s.queries.DeleteSessionCycle(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete session cycle: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionCycleRepo) GetLatestSessionCycleByStatus(ctx context.Context, status string) (*models.SessionCycle, error) {
 	sqlNullString := sql.NullString{String: status, Valid: true}
 	cycle, err := s.queries.GetLatestSessionCycleByStatus(ctx, sqlNullString)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, repo.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get latest session cycle by status: %w", err)
 	}
 	return s.mapSQLCSessionCycleToModel(cycle), nil
 }
@@ -193,7 +213,7 @@ func (s *sessionCycleRepo) GetSessionCycleByStatusWithMetadata(ctx context.Conte
 	sqlNullString := sql.NullString{String: status, Valid: true}
 	rows, err := s.queries.GetSessionCycleByStatusWithMetadata(ctx, sqlNullString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session cycle by status with metadata: %w", err)
 	}
 
 	result := make([]*models.SessionCycleWithMetadata, len(rows))

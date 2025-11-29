@@ -3,10 +3,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/models"
+	repo "github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo"
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/sqlc"
 )
 
@@ -53,7 +55,7 @@ func (s *sessionRepo) CreateSession(ctx context.Context, session models.Session)
 
 	id, err := s.queries.CreateSession(ctx, params)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to create session: %w", err)
 	}
 	return id, nil
 }
@@ -61,7 +63,10 @@ func (s *sessionRepo) CreateSession(ctx context.Context, session models.Session)
 func (s *sessionRepo) GetSessionByID(ctx context.Context, id int64) (*models.Session, error) {
 	session, err := s.queries.GetSessionById(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, repo.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get session by id: %w", err)
 	}
 	return s.mapSQLCSessionToModel(session), nil
 }
@@ -69,7 +74,7 @@ func (s *sessionRepo) GetSessionByID(ctx context.Context, id int64) (*models.Ses
 func (s *sessionRepo) GetAllSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetAllSessions(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get all sessions: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))
@@ -82,7 +87,7 @@ func (s *sessionRepo) GetAllSessions(ctx context.Context) ([]*models.Session, er
 func (s *sessionRepo) GetActiveSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetActiveSessions(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get active sessions: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))
@@ -95,7 +100,7 @@ func (s *sessionRepo) GetActiveSessions(ctx context.Context) ([]*models.Session,
 func (s *sessionRepo) GetCompletedSessions(ctx context.Context) ([]*models.Session, error) {
 	sessions, err := s.queries.GetCompletedSessions(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get completed sessions: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))
@@ -109,7 +114,7 @@ func (s *sessionRepo) GetSessionsByTrackedStatus(ctx context.Context, isTracked 
 	sqlNullBool := sql.NullBool{Bool: isTracked, Valid: true}
 	sessions, err := s.queries.GetSessionsByTrackedStatus(ctx, sqlNullBool)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sessions by tracked status: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))
@@ -123,7 +128,7 @@ func (s *sessionRepo) GetSessionsForDate(ctx context.Context, date time.Time) ([
 	sqlNullTime := sql.NullTime{Time: date, Valid: true}
 	sessions, err := s.queries.GetSessionsForDate(ctx, sqlNullTime)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get sessions for date: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))
@@ -165,7 +170,10 @@ func (s *sessionRepo) UpdateSession(ctx context.Context, session models.Session)
 		params.LongBreakCycle = sql.NullInt64{Int64: *session.LongBreakCycle, Valid: true}
 	}
 
-	return s.queries.UpdateSession(ctx, params)
+	if err := s.queries.UpdateSession(ctx, params); err != nil {
+		return fmt.Errorf("failed to update session: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status string) error {
@@ -173,7 +181,10 @@ func (s *sessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status 
 		ID:     id,
 		Status: status,
 	}
-	return s.queries.UpdateSessionStatus(ctx, params)
+	if err := s.queries.UpdateSessionStatus(ctx, params); err != nil {
+		return fmt.Errorf("failed to update session status: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTime time.Time) error {
@@ -181,7 +192,10 @@ func (s *sessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTim
 		ID:      id,
 		EndTime: sql.NullTime{Time: endTime, Valid: true},
 	}
-	return s.queries.UpdateSessionEndTime(ctx, params)
+	if err := s.queries.UpdateSessionEndTime(ctx, params); err != nil {
+		return fmt.Errorf("failed to update session end time: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) UpdateSessionNote(ctx context.Context, id int64, note string) error {
@@ -189,15 +203,24 @@ func (s *sessionRepo) UpdateSessionNote(ctx context.Context, id int64, note stri
 		ID:   id,
 		Note: sql.NullString{String: note, Valid: true},
 	}
-	return s.queries.UpdateSessionNote(ctx, params)
+	if err := s.queries.UpdateSessionNote(ctx, params); err != nil {
+		return fmt.Errorf("failed to update session note: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) DeleteSession(ctx context.Context, id int64) error {
-	return s.queries.DeleteSession(ctx, id)
+	if err := s.queries.DeleteSession(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) MarkSessionCompleted(ctx context.Context, id int64) error {
-	return s.queries.MarkSessionCompleted(ctx, id)
+	if err := s.queries.MarkSessionCompleted(ctx, id); err != nil {
+		return fmt.Errorf("failed to mark session completed: %w", err)
+	}
+	return nil
 }
 
 func (s *sessionRepo) mapSQLCSessionToModel(session sqlc.Session) *models.Session {

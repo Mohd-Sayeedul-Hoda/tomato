@@ -7,13 +7,12 @@ CREATE TABLE sessions(
   break_duration INTEGER NOT NULL,
   long_break_duration INTEGER NOT NULL,
   long_break_cycle INTEGER DEFAULT 4,
-  start_time DATETIME NOT NULL, -- 
-  end_time DATETIME, 
   status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'cancelled')),
   session_estimate INTEGER,
   is_tracked BOOLEAN DEFAULT FALSE,  -- false = just a timer, true = logged work
   note TEXT, -- for extra info here
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 -- +goose StatementEnd
 

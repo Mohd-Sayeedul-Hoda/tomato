@@ -17,6 +17,9 @@ migrate:
 
 migrate-down:
 	@goose -dir db/migrations sqlite /home/aman/.local/share/tomato/tomato.db down 
+
+migrate-status:
+	@goose -dir db/migrations sqlite /home/aman/.local/share/tomato/tomato.db status 
  
 seed: 
 	@goose -dir db/seeds sqlite /home/aman/.local/share/tomato/tomato.db up  

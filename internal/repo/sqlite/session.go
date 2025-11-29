@@ -21,6 +21,7 @@ func NewSessionRepository(db *sql.DB) (*sessionRepo, error) {
 		return nil, fmt.Errorf("database connection cannot be nil")
 	}
 
+	// TODO: have to use interface define in sqlc queries
 	return &sessionRepo{
 		queries: sqlc.New(db),
 	}, nil
@@ -28,16 +29,11 @@ func NewSessionRepository(db *sql.DB) (*sessionRepo, error) {
 
 func (s *sessionRepo) CreateSession(ctx context.Context, session models.Session) (int64, error) {
 	params := sqlc.CreateSessionParams{
-		Label:             session.Label,
-		Note:              sql.NullString{String: "", Valid: false},
-		Status:            session.Status,
-		SessionEstimate:   sql.NullInt64{Int64: 0, Valid: false},
-		IsTracked:         sql.NullBool{Bool: false, Valid: false},
-		StartTime:         session.StartTime,
-		WorkDuration:      session.WorkDuration,
-		BreakDuration:     session.BreakDuration,
-		LongBreakDuration: session.LongBreakDuration,
-		LongBreakCycle:    sql.NullInt64{Int64: 0, Valid: false},
+		Label:           session.Label,
+		Note:            sql.NullString{String: "", Valid: false},
+		Status:          session.Status,
+		SessionEstimate: sql.NullInt64{Int64: 0, Valid: false},
+		IsTracked:       sql.NullBool{Bool: false, Valid: false},
 	}
 
 	if session.Note != nil {
@@ -48,9 +44,6 @@ func (s *sessionRepo) CreateSession(ctx context.Context, session models.Session)
 	}
 	if session.IsTracked != nil {
 		params.IsTracked = sql.NullBool{Bool: *session.IsTracked, Valid: true}
-	}
-	if session.LongBreakCycle != nil {
-		params.LongBreakCycle = sql.NullInt64{Int64: *session.LongBreakCycle, Valid: true}
 	}
 
 	id, err := s.queries.CreateSession(ctx, params)
@@ -140,18 +133,12 @@ func (s *sessionRepo) GetSessionsForDate(ctx context.Context, date time.Time) ([
 
 func (s *sessionRepo) UpdateSession(ctx context.Context, session models.Session) error {
 	params := sqlc.UpdateSessionParams{
-		ID:                session.ID,
-		Label:             session.Label,
-		Note:              sql.NullString{String: "", Valid: false},
-		Status:            session.Status,
-		SessionEstimate:   sql.NullInt64{Int64: 0, Valid: false},
-		IsTracked:         sql.NullBool{Bool: false, Valid: false},
-		StartTime:         session.StartTime,
-		EndTime:           sql.NullTime{Time: time.Time{}, Valid: false},
-		WorkDuration:      session.WorkDuration,
-		BreakDuration:     session.BreakDuration,
-		LongBreakDuration: session.LongBreakDuration,
-		LongBreakCycle:    sql.NullInt64{Int64: 0, Valid: false},
+		ID:              session.ID,
+		Label:           session.Label,
+		Note:            sql.NullString{String: "", Valid: false},
+		Status:          session.Status,
+		SessionEstimate: sql.NullInt64{Int64: 0, Valid: false},
+		IsTracked:       sql.NullBool{Bool: false, Valid: false},
 	}
 
 	if session.Note != nil {
@@ -162,12 +149,6 @@ func (s *sessionRepo) UpdateSession(ctx context.Context, session models.Session)
 	}
 	if session.IsTracked != nil {
 		params.IsTracked = sql.NullBool{Bool: *session.IsTracked, Valid: true}
-	}
-	if session.EndTime != nil {
-		params.EndTime = sql.NullTime{Time: *session.EndTime, Valid: true}
-	}
-	if session.LongBreakCycle != nil {
-		params.LongBreakCycle = sql.NullInt64{Int64: *session.LongBreakCycle, Valid: true}
 	}
 
 	if err := s.queries.UpdateSession(ctx, params); err != nil {
@@ -183,17 +164,6 @@ func (s *sessionRepo) UpdateSessionStatus(ctx context.Context, id int64, status 
 	}
 	if err := s.queries.UpdateSessionStatus(ctx, params); err != nil {
 		return fmt.Errorf("failed to update session status: %w", err)
-	}
-	return nil
-}
-
-func (s *sessionRepo) UpdateSessionEndTime(ctx context.Context, id int64, endTime time.Time) error {
-	params := sqlc.UpdateSessionEndTimeParams{
-		ID:      id,
-		EndTime: sql.NullTime{Time: endTime, Valid: true},
-	}
-	if err := s.queries.UpdateSessionEndTime(ctx, params); err != nil {
-		return fmt.Errorf("failed to update session end time: %w", err)
 	}
 	return nil
 }
@@ -225,21 +195,11 @@ func (s *sessionRepo) MarkSessionCompleted(ctx context.Context, id int64) error 
 
 func (s *sessionRepo) mapSQLCSessionToModel(session sqlc.Session) *models.Session {
 	result := &models.Session{
-		ID:                session.ID,
-		Label:             session.Label,
-		WorkDuration:      session.WorkDuration,
-		BreakDuration:     session.BreakDuration,
-		LongBreakDuration: session.LongBreakDuration,
-		StartTime:         session.StartTime,
-		Status:            session.Status,
+		ID:     session.ID,
+		Label:  session.Label,
+		Status: session.Status,
 	}
 
-	if session.LongBreakCycle.Valid {
-		result.LongBreakCycle = &session.LongBreakCycle.Int64
-	}
-	if session.EndTime.Valid {
-		result.EndTime = &session.EndTime.Time
-	}
 	if session.SessionEstimate.Valid {
 		result.SessionEstimate = &session.SessionEstimate.Int64
 	}
@@ -251,6 +211,9 @@ func (s *sessionRepo) mapSQLCSessionToModel(session sqlc.Session) *models.Sessio
 	}
 	if session.CreatedAt.Valid {
 		result.CreatedAt = &session.CreatedAt.Time
+	}
+	if session.UpdatedAt.Valid {
+		result.UpdatedAt = &session.UpdatedAt.Time
 	}
 
 	return result

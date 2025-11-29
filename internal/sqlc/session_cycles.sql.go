@@ -11,16 +11,17 @@ import (
 )
 
 const createSessionCycle = `-- name: CreateSessionCycle :one
-INSERT INTO session_cycles(session_id, type, start_time, status)
-VALUES (?1, ?2, ?3, ?4)
+INSERT INTO session_cycles(session_id, type, start_time, status, timer_profile_id)
+VALUES (?1, ?2, ?3, ?4, ?5)
 RETURNING id
 `
 
 type CreateSessionCycleParams struct {
-	SessionID int64
-	Type      sql.NullString
-	StartTime sql.NullTime
-	Status    sql.NullString
+	SessionID      int64
+	Type           sql.NullString
+	StartTime      sql.NullTime
+	Status         sql.NullString
+	TimerProfileID int64
 }
 
 func (q *Queries) CreateSessionCycle(ctx context.Context, arg CreateSessionCycleParams) (int64, error) {
@@ -29,6 +30,7 @@ func (q *Queries) CreateSessionCycle(ctx context.Context, arg CreateSessionCycle
 		arg.Type,
 		arg.StartTime,
 		arg.Status,
+		arg.TimerProfileID,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -46,7 +48,7 @@ func (q *Queries) DeleteSessionCycle(ctx context.Context, id int64) error {
 }
 
 const getLatestSessionCycleByStatus = `-- name: GetLatestSessionCycleByStatus :one
-SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE status = ?1
 ORDER BY created_at DESC
 LIMIT 1
@@ -58,6 +60,7 @@ func (q *Queries) GetLatestSessionCycleByStatus(ctx context.Context, status sql.
 	err := row.Scan(
 		&i.ID,
 		&i.SessionID,
+		&i.TimerProfileID,
 		&i.Type,
 		&i.CreatedAt,
 		&i.StartTime,
@@ -69,7 +72,7 @@ func (q *Queries) GetLatestSessionCycleByStatus(ctx context.Context, status sql.
 }
 
 const getSessionCycleByID = `-- name: GetSessionCycleByID :one
-SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE id = ?1
 `
 
@@ -79,6 +82,7 @@ func (q *Queries) GetSessionCycleByID(ctx context.Context, id int64) (SessionCyc
 	err := row.Scan(
 		&i.ID,
 		&i.SessionID,
+		&i.TimerProfileID,
 		&i.Type,
 		&i.CreatedAt,
 		&i.StartTime,
@@ -99,15 +103,16 @@ SELECT
     sc.end_time,
     sc.duration,
     sc.status,
-
-    s.work_duration,
-    s.break_duration,
-    s.long_break_duration,
-    s.long_break_cycle
+    tp.work_duration as work_duration,
+    tp.break_duration as break_duration,
+    tp.long_break_duration as long_break_duration,
+    tp.long_break_cycle as long_break_cycle
 FROM
     session_cycles AS sc
 INNER JOIN
     sessions AS s ON sc.session_id = s.id
+LEFT JOIN
+    time_profiles AS tp ON sc.timer_profile_id = tp.id
 WHERE
     sc.status = ?1
 `
@@ -121,9 +126,9 @@ type GetSessionCycleByStatusWithMetadataRow struct {
 	EndTime           sql.NullTime
 	Duration          sql.NullInt64
 	Status            sql.NullString
-	WorkDuration      int64
-	BreakDuration     int64
-	LongBreakDuration int64
+	WorkDuration      sql.NullInt64
+	BreakDuration     sql.NullInt64
+	LongBreakDuration sql.NullInt64
 	LongBreakCycle    sql.NullInt64
 }
 
@@ -164,7 +169,7 @@ func (q *Queries) GetSessionCycleByStatusWithMetadata(ctx context.Context, statu
 }
 
 const getSessionCyclesBySessionID = `-- name: GetSessionCyclesBySessionID :many
-SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE session_id = ?1
 ORDER BY id
 `
@@ -181,6 +186,7 @@ func (q *Queries) GetSessionCyclesBySessionID(ctx context.Context, sessionID int
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
+			&i.TimerProfileID,
 			&i.Type,
 			&i.CreatedAt,
 			&i.StartTime,
@@ -202,7 +208,7 @@ func (q *Queries) GetSessionCyclesBySessionID(ctx context.Context, sessionID int
 }
 
 const getSessionCyclesByStatus = `-- name: GetSessionCyclesByStatus :many
-SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE status = ?1
 `
 
@@ -218,6 +224,7 @@ func (q *Queries) GetSessionCyclesByStatus(ctx context.Context, status sql.NullS
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
+			&i.TimerProfileID,
 			&i.Type,
 			&i.CreatedAt,
 			&i.StartTime,
@@ -239,7 +246,7 @@ func (q *Queries) GetSessionCyclesByStatus(ctx context.Context, status sql.NullS
 }
 
 const getSessionCyclesByType = `-- name: GetSessionCyclesByType :many
-SELECT id, session_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
+SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE type = ?1
 `
 
@@ -255,6 +262,7 @@ func (q *Queries) GetSessionCyclesByType(ctx context.Context, type_ sql.NullStri
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
+			&i.TimerProfileID,
 			&i.Type,
 			&i.CreatedAt,
 			&i.StartTime,

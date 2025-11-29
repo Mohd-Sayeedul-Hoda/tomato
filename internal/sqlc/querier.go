@@ -12,11 +12,14 @@ import (
 type Querier interface {
 	CreateSession(ctx context.Context, arg CreateSessionParams) (int64, error)
 	CreateSessionCycle(ctx context.Context, arg CreateSessionCycleParams) (int64, error)
+	CreateTimeProfile(ctx context.Context, arg CreateTimeProfileParams) (TimeProfile, error)
 	DeleteSession(ctx context.Context, id int64) error
 	DeleteSessionCycle(ctx context.Context, id int64) error
+	DeleteTimeProfile(ctx context.Context, id int64) error
 	GetActiveSessions(ctx context.Context) ([]Session, error)
 	GetAllSessions(ctx context.Context) ([]Session, error)
 	GetCompletedSessions(ctx context.Context) ([]Session, error)
+	GetDefaultTimeProfile(ctx context.Context) (TimeProfile, error)
 	GetLatestSessionCycleByStatus(ctx context.Context, status sql.NullString) (SessionCycle, error)
 	GetSessionById(ctx context.Context, id int64) (Session, error)
 	GetSessionCycleByID(ctx context.Context, id int64) (SessionCycle, error)
@@ -26,14 +29,16 @@ type Querier interface {
 	GetSessionCyclesByType(ctx context.Context, type_ sql.NullString) ([]SessionCycle, error)
 	GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.NullBool) ([]Session, error)
 	GetSessionsForDate(ctx context.Context, createdAt sql.NullTime) ([]Session, error)
+	GetTimeProfile(ctx context.Context, id int64) (TimeProfile, error)
+	ListTimeProfiles(ctx context.Context) ([]TimeProfile, error)
 	MarkSessionCompleted(ctx context.Context, id int64) error
 	MarkSessionCycleComplete(ctx context.Context, arg MarkSessionCycleCompleteParams) error
 	MarkSessionCycleCompleted(ctx context.Context, id int64) error
 	UpdateSession(ctx context.Context, arg UpdateSessionParams) error
 	UpdateSessionCycleStatus(ctx context.Context, arg UpdateSessionCycleStatusParams) error
-	UpdateSessionEndTime(ctx context.Context, arg UpdateSessionEndTimeParams) error
 	UpdateSessionNote(ctx context.Context, arg UpdateSessionNoteParams) error
 	UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error
+	UpdateTimeProfile(ctx context.Context, arg UpdateTimeProfileParams) (TimeProfile, error)
 }
 
 var _ Querier = (*Queries)(nil)

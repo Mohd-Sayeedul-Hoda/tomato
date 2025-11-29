@@ -28,10 +28,11 @@ func NewSessionCycleRepository(db *sql.DB) (*sessionCycleRepo, error) {
 
 func (s *sessionCycleRepo) CreateSessionCycle(ctx context.Context, cycle models.SessionCycle) (int64, error) {
 	params := sqlc.CreateSessionCycleParams{
-		SessionID: cycle.SessionID,
-		Type:      sql.NullString{String: "", Valid: false},
-		StartTime: sql.NullTime{Time: time.Time{}, Valid: false},
-		Status:    sql.NullString{String: "", Valid: false},
+		SessionID:      cycle.SessionID,
+		TimerProfileID: cycle.TimerProfileID,
+		Type:           sql.NullString{String: "", Valid: false},
+		StartTime:      sql.NullTime{Time: time.Time{}, Valid: false},
+		Status:         sql.NullString{String: "", Valid: false},
 	}
 
 	if cycle.Type != nil {
@@ -155,8 +156,9 @@ func (s *sessionCycleRepo) GetLatestSessionCycleByStatus(ctx context.Context, st
 
 func (s *sessionCycleRepo) mapSQLCSessionCycleToModel(cycle sqlc.SessionCycle) *models.SessionCycle {
 	result := &models.SessionCycle{
-		ID:        cycle.ID,
-		SessionID: cycle.SessionID,
+		ID:             cycle.ID,
+		SessionID:      cycle.SessionID,
+		TimerProfileID: cycle.TimerProfileID,
 	}
 
 	if cycle.Type.Valid {
@@ -180,11 +182,18 @@ func (s *sessionCycleRepo) mapSQLCSessionCycleToModel(cycle sqlc.SessionCycle) *
 
 func (s *sessionCycleRepo) mapSQLCSessionCycleWithMetadataToModel(row sqlc.GetSessionCycleByStatusWithMetadataRow) *models.SessionCycleWithMetadata {
 	result := &models.SessionCycleWithMetadata{
-		ID:                row.ID,
-		SessionID:         row.SessionID,
-		WorkDuration:      row.WorkDuration,
-		BreakDuration:     row.BreakDuration,
-		LongBreakDuration: row.LongBreakDuration,
+		ID:        row.ID,
+		SessionID: row.SessionID,
+	}
+
+	if row.WorkDuration.Valid {
+		result.WorkDuration = row.WorkDuration.Int64
+	}
+	if row.BreakDuration.Valid {
+		result.BreakDuration = row.BreakDuration.Int64
+	}
+	if row.LongBreakDuration.Valid {
+		result.LongBreakDuration = row.LongBreakDuration.Int64
 	}
 
 	if row.Type.Valid {

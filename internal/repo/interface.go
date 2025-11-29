@@ -24,7 +24,7 @@ type SessionRepository interface {
 	GetSessionsForDate(ctx context.Context, date time.Time) ([]*models.Session, error)
 	UpdateSession(ctx context.Context, session models.Session) error
 	UpdateSessionStatus(ctx context.Context, id int64, status string) error
-	UpdateSessionEndTime(ctx context.Context, id int64, endTime time.Time) error
+
 	UpdateSessionNote(ctx context.Context, id int64, note string) error
 	DeleteSession(ctx context.Context, id int64) error
 	MarkSessionCompleted(ctx context.Context, id int64) error
@@ -42,4 +42,13 @@ type SessionCycleRepository interface {
 	MarkSessionCycleComplete(ctx context.Context, id int64, status string, endTime time.Time, duration int64) error
 	MarkSessionCycleCompleted(ctx context.Context, id int64) error
 	DeleteSessionCycle(ctx context.Context, id int64) error
+}
+
+type TimeProfileRepository interface {
+	CreateTimeProfile(ctx context.Context, profile models.TimeProfile) (*models.TimeProfile, error)
+	GetTimeProfile(ctx context.Context, id int64) (*models.TimeProfile, error)
+	GetDefaultTimeProfile(ctx context.Context) (*models.TimeProfile, error)
+	ListTimeProfiles(ctx context.Context) ([]*models.TimeProfile, error)
+	UpdateTimeProfile(ctx context.Context, profile models.TimeProfile) (*models.TimeProfile, error)
+	DeleteTimeProfile(ctx context.Context, id int64) error
 }

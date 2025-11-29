@@ -8,26 +8,20 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"time"
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (label, note, status, session_estimate, is_tracked, start_time, work_duration, break_duration, long_break_duration, long_break_cycle)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+INSERT INTO sessions (label, note, status, session_estimate, is_tracked)
+VALUES (?1, ?2, ?3, ?4, ?5)
 RETURNING id
 `
 
 type CreateSessionParams struct {
-	Label             string
-	Note              sql.NullString
-	Status            string
-	SessionEstimate   sql.NullInt64
-	IsTracked         sql.NullBool
-	StartTime         time.Time
-	WorkDuration      int64
-	BreakDuration     int64
-	LongBreakDuration int64
-	LongBreakCycle    sql.NullInt64
+	Label           string
+	Note            sql.NullString
+	Status          string
+	SessionEstimate sql.NullInt64
+	IsTracked       sql.NullBool
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (int64, error) {
@@ -37,11 +31,6 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (i
 		arg.Status,
 		arg.SessionEstimate,
 		arg.IsTracked,
-		arg.StartTime,
-		arg.WorkDuration,
-		arg.BreakDuration,
-		arg.LongBreakDuration,
-		arg.LongBreakCycle,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -58,7 +47,7 @@ func (q *Queries) DeleteSession(ctx context.Context, id int64) error {
 }
 
 const getActiveSessions = `-- name: GetActiveSessions :many
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions WHERE status = 'running'
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE status = 'running'
 `
 
 func (q *Queries) GetActiveSessions(ctx context.Context) ([]Session, error) {
@@ -73,17 +62,12 @@ func (q *Queries) GetActiveSessions(ctx context.Context) ([]Session, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Label,
-			&i.WorkDuration,
-			&i.BreakDuration,
-			&i.LongBreakDuration,
-			&i.LongBreakCycle,
-			&i.StartTime,
-			&i.EndTime,
 			&i.Status,
 			&i.SessionEstimate,
 			&i.IsTracked,
 			&i.Note,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -99,7 +83,7 @@ func (q *Queries) GetActiveSessions(ctx context.Context) ([]Session, error) {
 }
 
 const getAllSessions = `-- name: GetAllSessions :many
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions ORDER BY created_at DESC
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions ORDER BY created_at DESC
 `
 
 func (q *Queries) GetAllSessions(ctx context.Context) ([]Session, error) {
@@ -114,17 +98,12 @@ func (q *Queries) GetAllSessions(ctx context.Context) ([]Session, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Label,
-			&i.WorkDuration,
-			&i.BreakDuration,
-			&i.LongBreakDuration,
-			&i.LongBreakCycle,
-			&i.StartTime,
-			&i.EndTime,
 			&i.Status,
 			&i.SessionEstimate,
 			&i.IsTracked,
 			&i.Note,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +119,7 @@ func (q *Queries) GetAllSessions(ctx context.Context) ([]Session, error) {
 }
 
 const getCompletedSessions = `-- name: GetCompletedSessions :many
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions WHERE status = 'completed' ORDER BY end_time DESC
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE status = 'completed' ORDER BY updated_at DESC
 `
 
 func (q *Queries) GetCompletedSessions(ctx context.Context) ([]Session, error) {
@@ -155,17 +134,12 @@ func (q *Queries) GetCompletedSessions(ctx context.Context) ([]Session, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Label,
-			&i.WorkDuration,
-			&i.BreakDuration,
-			&i.LongBreakDuration,
-			&i.LongBreakCycle,
-			&i.StartTime,
-			&i.EndTime,
 			&i.Status,
 			&i.SessionEstimate,
 			&i.IsTracked,
 			&i.Note,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -181,7 +155,7 @@ func (q *Queries) GetCompletedSessions(ctx context.Context) ([]Session, error) {
 }
 
 const getSessionById = `-- name: GetSessionById :one
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions WHERE id = ?1
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE id = ?1
 `
 
 func (q *Queries) GetSessionById(ctx context.Context, id int64) (Session, error) {
@@ -190,23 +164,18 @@ func (q *Queries) GetSessionById(ctx context.Context, id int64) (Session, error)
 	err := row.Scan(
 		&i.ID,
 		&i.Label,
-		&i.WorkDuration,
-		&i.BreakDuration,
-		&i.LongBreakDuration,
-		&i.LongBreakCycle,
-		&i.StartTime,
-		&i.EndTime,
 		&i.Status,
 		&i.SessionEstimate,
 		&i.IsTracked,
 		&i.Note,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getSessionsByTrackedStatus = `-- name: GetSessionsByTrackedStatus :many
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions WHERE is_tracked = ?1 ORDER BY created_at DESC
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE is_tracked = ?1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.NullBool) ([]Session, error) {
@@ -221,17 +190,12 @@ func (q *Queries) GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.
 		if err := rows.Scan(
 			&i.ID,
 			&i.Label,
-			&i.WorkDuration,
-			&i.BreakDuration,
-			&i.LongBreakDuration,
-			&i.LongBreakCycle,
-			&i.StartTime,
-			&i.EndTime,
 			&i.Status,
 			&i.SessionEstimate,
 			&i.IsTracked,
 			&i.Note,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -247,7 +211,7 @@ func (q *Queries) GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.
 }
 
 const getSessionsForDate = `-- name: GetSessionsForDate :many
-SELECT id, label, work_duration, break_duration, long_break_duration, long_break_cycle, start_time, end_time, status, session_estimate, is_tracked, note, created_at FROM sessions WHERE DATE(created_at) = ?1
+SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE DATE(created_at) = ?1
 `
 
 func (q *Queries) GetSessionsForDate(ctx context.Context, createdAt sql.NullTime) ([]Session, error) {
@@ -262,17 +226,12 @@ func (q *Queries) GetSessionsForDate(ctx context.Context, createdAt sql.NullTime
 		if err := rows.Scan(
 			&i.ID,
 			&i.Label,
-			&i.WorkDuration,
-			&i.BreakDuration,
-			&i.LongBreakDuration,
-			&i.LongBreakCycle,
-			&i.StartTime,
-			&i.EndTime,
 			&i.Status,
 			&i.SessionEstimate,
 			&i.IsTracked,
 			&i.Note,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -289,7 +248,7 @@ func (q *Queries) GetSessionsForDate(ctx context.Context, createdAt sql.NullTime
 
 const markSessionCompleted = `-- name: MarkSessionCompleted :exec
 UPDATE sessions
-SET status = 'completed', end_time = CURRENT_TIMESTAMP
+SET status = 'completed'
 WHERE id = ?1
 `
 
@@ -304,29 +263,17 @@ SET label = ?2,
     note = ?3,
     status = ?4,
     session_estimate = ?5,
-    is_tracked = ?6,
-    start_time = ?7,
-    end_time = ?8,
-    work_duration = ?9,
-    break_duration = ?10,
-    long_break_duration = ?11,
-    long_break_cycle = ?12
+    is_tracked = ?6
 WHERE id = ?1
 `
 
 type UpdateSessionParams struct {
-	ID                int64
-	Label             string
-	Note              sql.NullString
-	Status            string
-	SessionEstimate   sql.NullInt64
-	IsTracked         sql.NullBool
-	StartTime         time.Time
-	EndTime           sql.NullTime
-	WorkDuration      int64
-	BreakDuration     int64
-	LongBreakDuration int64
-	LongBreakCycle    sql.NullInt64
+	ID              int64
+	Label           string
+	Note            sql.NullString
+	Status          string
+	SessionEstimate sql.NullInt64
+	IsTracked       sql.NullBool
 }
 
 func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) error {
@@ -337,27 +284,7 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 		arg.Status,
 		arg.SessionEstimate,
 		arg.IsTracked,
-		arg.StartTime,
-		arg.EndTime,
-		arg.WorkDuration,
-		arg.BreakDuration,
-		arg.LongBreakDuration,
-		arg.LongBreakCycle,
 	)
-	return err
-}
-
-const updateSessionEndTime = `-- name: UpdateSessionEndTime :exec
-UPDATE sessions SET end_time = ?2 WHERE id = ?1
-`
-
-type UpdateSessionEndTimeParams struct {
-	ID      int64
-	EndTime sql.NullTime
-}
-
-func (q *Queries) UpdateSessionEndTime(ctx context.Context, arg UpdateSessionEndTimeParams) error {
-	_, err := q.db.ExecContext(ctx, updateSessionEndTime, arg.ID, arg.EndTime)
 	return err
 }
 

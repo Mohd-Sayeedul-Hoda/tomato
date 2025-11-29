@@ -6,32 +6,37 @@ package sqlc
 
 import (
 	"database/sql"
-	"time"
 )
 
 type Session struct {
+	ID              int64
+	Label           string
+	Status          string
+	SessionEstimate sql.NullInt64
+	IsTracked       sql.NullBool
+	Note            sql.NullString
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+}
+
+type SessionCycle struct {
+	ID             int64
+	SessionID      int64
+	TimerProfileID int64
+	Type           sql.NullString
+	CreatedAt      sql.NullTime
+	StartTime      sql.NullTime
+	EndTime        sql.NullTime
+	Duration       sql.NullInt64
+	Status         sql.NullString
+}
+
+type TimeProfile struct {
 	ID                int64
-	Label             string
+	Name              string
 	WorkDuration      int64
 	BreakDuration     int64
 	LongBreakDuration int64
 	LongBreakCycle    sql.NullInt64
-	StartTime         time.Time
-	EndTime           sql.NullTime
-	Status            string
-	SessionEstimate   sql.NullInt64
-	IsTracked         sql.NullBool
-	Note              sql.NullString
-	CreatedAt         sql.NullTime
-}
-
-type SessionCycle struct {
-	ID        int64
-	SessionID int64
-	Type      sql.NullString
-	CreatedAt sql.NullTime
-	StartTime sql.NullTime
-	EndTime   sql.NullTime
-	Duration  sql.NullInt64
-	Status    sql.NullString
+	IsDefault         sql.NullBool
 }

@@ -1,6 +1,6 @@
 -- name: CreateSessionCycle :one
-INSERT INTO session_cycles(session_id, type, start_time, status)
-VALUES (?1, ?2, ?3, ?4)
+INSERT INTO session_cycles(session_id, type, start_time, status, timer_profile_id)
+VALUES (?1, ?2, ?3, ?4, ?5)
 RETURNING id;
 
 -- name: GetSessionCycleByID :one
@@ -55,14 +55,15 @@ SELECT
     sc.end_time,
     sc.duration,
     sc.status,
-
-    s.work_duration,
-    s.break_duration,
-    s.long_break_duration,
-    s.long_break_cycle
+    tp.work_duration as work_duration,
+    tp.break_duration as break_duration,
+    tp.long_break_duration as long_break_duration,
+    tp.long_break_cycle as long_break_cycle
 FROM
     session_cycles AS sc
 INNER JOIN
     sessions AS s ON sc.session_id = s.id
+LEFT JOIN
+    time_profiles AS tp ON sc.timer_profile_id = tp.id
 WHERE
-    sc.status = ?1
+    sc.status = ?1;

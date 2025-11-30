@@ -65,7 +65,7 @@ func (s *sessionCycleRepo) GetSessionCycleByID(ctx context.Context, id int64) (*
 
 func (s *sessionCycleRepo) ListSessionCycles(ctx context.Context, filter models.SessionCycleFilter) ([]*models.SessionCycle, error) {
 	params := sqlc.ListSessionCyclesParams{
-		Limit: 1000, // Default limit
+		Limit: 1000,
 	}
 
 	if filter.SessionID != nil {

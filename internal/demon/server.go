@@ -97,7 +97,7 @@ func handleConn(conn net.Conn, wg *sync.WaitGroup, sessionRepo repo.SessionRepos
 
 	defer func() {
 		if err := recover(); err != nil {
-			ServerErrorResponse(conn, "NONE", fmt.Errorf("%s", err))
+			ServerErrorResponse(conn, NotDefine, fmt.Errorf("%s", err))
 			conn.Close()
 		}
 	}()
@@ -111,19 +111,18 @@ func manageConn(conn net.Conn, sessionRepo repo.SessionRepository, sessCycleRepo
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidRequest):
-			errorResponse(conn, "NONE", 400, err.Error())
+			errorResponse(conn, NotDefine, 400, err.Error())
 		default:
-			ServerErrorResponse(conn, "NONE", err)
+			ServerErrorResponse(conn, NotDefine, err)
 		}
 		return
 	}
 
 	switch req.Method {
-	case "STATUS":
+	case Status:
 		healthCheck(conn, req)
-	case "START"
-		startSession(conn, )
-
+	case SessionCreate:
+		createSession(conn, sessionRepo, req)
 	default:
 		notFound(conn)
 	}

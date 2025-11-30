@@ -47,30 +47,6 @@ func (q *Queries) DeleteSessionCycle(ctx context.Context, id int64) error {
 	return err
 }
 
-const getLatestSessionCycleByStatus = `-- name: GetLatestSessionCycleByStatus :one
-SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
-WHERE status = ?1
-ORDER BY created_at DESC
-LIMIT 1
-`
-
-func (q *Queries) GetLatestSessionCycleByStatus(ctx context.Context, status sql.NullString) (SessionCycle, error) {
-	row := q.db.QueryRowContext(ctx, getLatestSessionCycleByStatus, status)
-	var i SessionCycle
-	err := row.Scan(
-		&i.ID,
-		&i.SessionID,
-		&i.TimerProfileID,
-		&i.Type,
-		&i.CreatedAt,
-		&i.StartTime,
-		&i.EndTime,
-		&i.Duration,
-		&i.Status,
-	)
-	return i, err
-}
-
 const getSessionCycleByID = `-- name: GetSessionCycleByID :one
 SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
 WHERE id = ?1
@@ -168,90 +144,35 @@ func (q *Queries) GetSessionCycleByStatusWithMetadata(ctx context.Context, statu
 	return items, nil
 }
 
-const getSessionCyclesBySessionID = `-- name: GetSessionCyclesBySessionID :many
+const listSessionCycles = `-- name: ListSessionCycles :many
 SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
-WHERE session_id = ?1
-ORDER BY id
+WHERE
+  -- Filter by session_id: If NULL, ignore
+  (? IS NULL OR session_id = ?)
+  AND
+  -- Filter by status: If NULL, ignore
+  (? IS NULL OR status = ?)
+  AND
+  -- Filter by type: If NULL, ignore
+  (? IS NULL OR type = ?)
+ORDER BY created_at DESC
+LIMIT ?
 `
 
-func (q *Queries) GetSessionCyclesBySessionID(ctx context.Context, sessionID int64) ([]SessionCycle, error) {
-	rows, err := q.db.QueryContext(ctx, getSessionCyclesBySessionID, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SessionCycle
-	for rows.Next() {
-		var i SessionCycle
-		if err := rows.Scan(
-			&i.ID,
-			&i.SessionID,
-			&i.TimerProfileID,
-			&i.Type,
-			&i.CreatedAt,
-			&i.StartTime,
-			&i.EndTime,
-			&i.Duration,
-			&i.Status,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ListSessionCyclesParams struct {
+	SessionID interface{}
+	Status    interface{}
+	Type      interface{}
+	Limit     int64
 }
 
-const getSessionCyclesByStatus = `-- name: GetSessionCyclesByStatus :many
-SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
-WHERE status = ?1
-`
-
-func (q *Queries) GetSessionCyclesByStatus(ctx context.Context, status sql.NullString) ([]SessionCycle, error) {
-	rows, err := q.db.QueryContext(ctx, getSessionCyclesByStatus, status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SessionCycle
-	for rows.Next() {
-		var i SessionCycle
-		if err := rows.Scan(
-			&i.ID,
-			&i.SessionID,
-			&i.TimerProfileID,
-			&i.Type,
-			&i.CreatedAt,
-			&i.StartTime,
-			&i.EndTime,
-			&i.Duration,
-			&i.Status,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getSessionCyclesByType = `-- name: GetSessionCyclesByType :many
-SELECT id, session_id, timer_profile_id, type, created_at, start_time, end_time, duration, status FROM session_cycles
-WHERE type = ?1
-`
-
-func (q *Queries) GetSessionCyclesByType(ctx context.Context, type_ sql.NullString) ([]SessionCycle, error) {
-	rows, err := q.db.QueryContext(ctx, getSessionCyclesByType, type_)
+func (q *Queries) ListSessionCycles(ctx context.Context, arg ListSessionCyclesParams) ([]SessionCycle, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionCycles,
+		arg.SessionID,
+		arg.Status,
+		arg.Type,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

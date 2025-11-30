@@ -7,10 +7,19 @@ RETURNING id;
 SELECT * FROM session_cycles
 WHERE id = ?1;
 
--- name: GetSessionCyclesBySessionID :many
+-- name: ListSessionCycles :many
 SELECT * FROM session_cycles
-WHERE session_id = ?1
-ORDER BY id;
+WHERE
+  -- Filter by session_id: If NULL, ignore
+  (@session_id IS NULL OR session_id = @session_id)
+  AND
+  -- Filter by status: If NULL, ignore
+  (@status IS NULL OR status = @status)
+  AND
+  -- Filter by type: If NULL, ignore
+  (@type IS NULL OR type = @type)
+ORDER BY created_at DESC
+LIMIT ?;
 
 -- name: UpdateSessionCycleStatus :exec
 UPDATE session_cycles
@@ -26,24 +35,10 @@ WHERE id = ?1;
 DELETE FROM session_cycles
 WHERE id = ?1;
 
--- name: GetSessionCyclesByType :many
-SELECT * FROM session_cycles
-WHERE type = ?1;
-
--- name: GetSessionCyclesByStatus :many
-SELECT * FROM session_cycles
-WHERE status = ?1;
-
 -- name: MarkSessionCycleCompleted :exec
 UPDATE session_cycles
 SET status = 'completed', end_time = CURRENT_TIMESTAMP
 WHERE id = ?1;
-
--- name: GetLatestSessionCycleByStatus :one
-SELECT * FROM session_cycles
-WHERE status = ?1
-ORDER BY created_at DESC
-LIMIT 1;
 
 -- name: GetSessionCycleByStatusWithMetadata :many
 SELECT

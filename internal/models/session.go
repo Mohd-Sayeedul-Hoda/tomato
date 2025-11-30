@@ -15,6 +15,19 @@ type Session struct {
 	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
 }
 
+type SessionFilter struct {
+	Status    *string
+	Date      *time.Time
+	IsTracked *bool
+}
+
+type SessionCycleFilter struct {
+	SessionID *int64
+	Status    *string
+	Type      *string
+	Limit     *int
+}
+
 type TimeProfile struct {
 	ID                int64  `json:"id"`
 	Name              string `json:"name"`

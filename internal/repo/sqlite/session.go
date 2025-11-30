@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Mohd-Sayeedul-Hoda/tomato/internal/models"
 	repo "github.com/Mohd-Sayeedul-Hoda/tomato/internal/repo"
@@ -64,64 +63,22 @@ func (s *sessionRepo) GetSessionByID(ctx context.Context, id int64) (*models.Ses
 	return s.mapSQLCSessionToModel(session), nil
 }
 
-func (s *sessionRepo) GetAllSessions(ctx context.Context) ([]*models.Session, error) {
-	sessions, err := s.queries.GetAllSessions(ctx)
+func (s *sessionRepo) ListSessions(ctx context.Context, filter models.SessionFilter) ([]*models.Session, error) {
+	params := sqlc.ListSessionsParams{}
+
+	if filter.Status != nil {
+		params.Status = *filter.Status
+	}
+	if filter.Date != nil {
+		params.Date = filter.Date.Format("2006-01-02")
+	}
+	if filter.IsTracked != nil {
+		params.IsTracked = *filter.IsTracked
+	}
+
+	sessions, err := s.queries.ListSessions(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all sessions: %w", err)
-	}
-
-	result := make([]*models.Session, len(sessions))
-	for i, session := range sessions {
-		result[i] = s.mapSQLCSessionToModel(session)
-	}
-	return result, nil
-}
-
-func (s *sessionRepo) GetActiveSessions(ctx context.Context) ([]*models.Session, error) {
-	sessions, err := s.queries.GetActiveSessions(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active sessions: %w", err)
-	}
-
-	result := make([]*models.Session, len(sessions))
-	for i, session := range sessions {
-		result[i] = s.mapSQLCSessionToModel(session)
-	}
-	return result, nil
-}
-
-func (s *sessionRepo) GetCompletedSessions(ctx context.Context) ([]*models.Session, error) {
-	sessions, err := s.queries.GetCompletedSessions(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get completed sessions: %w", err)
-	}
-
-	result := make([]*models.Session, len(sessions))
-	for i, session := range sessions {
-		result[i] = s.mapSQLCSessionToModel(session)
-	}
-	return result, nil
-}
-
-func (s *sessionRepo) GetSessionsByTrackedStatus(ctx context.Context, isTracked bool) ([]*models.Session, error) {
-	sqlNullBool := sql.NullBool{Bool: isTracked, Valid: true}
-	sessions, err := s.queries.GetSessionsByTrackedStatus(ctx, sqlNullBool)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sessions by tracked status: %w", err)
-	}
-
-	result := make([]*models.Session, len(sessions))
-	for i, session := range sessions {
-		result[i] = s.mapSQLCSessionToModel(session)
-	}
-	return result, nil
-}
-
-func (s *sessionRepo) GetSessionsForDate(ctx context.Context, date time.Time) ([]*models.Session, error) {
-	sqlNullTime := sql.NullTime{Time: date, Valid: true}
-	sessions, err := s.queries.GetSessionsForDate(ctx, sqlNullTime)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sessions for date: %w", err)
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
 	result := make([]*models.Session, len(sessions))

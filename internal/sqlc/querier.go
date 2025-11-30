@@ -16,20 +16,13 @@ type Querier interface {
 	DeleteSession(ctx context.Context, id int64) error
 	DeleteSessionCycle(ctx context.Context, id int64) error
 	DeleteTimeProfile(ctx context.Context, id int64) error
-	GetActiveSessions(ctx context.Context) ([]Session, error)
-	GetAllSessions(ctx context.Context) ([]Session, error)
-	GetCompletedSessions(ctx context.Context) ([]Session, error)
 	GetDefaultTimeProfile(ctx context.Context) (TimeProfile, error)
-	GetLatestSessionCycleByStatus(ctx context.Context, status sql.NullString) (SessionCycle, error)
 	GetSessionById(ctx context.Context, id int64) (Session, error)
 	GetSessionCycleByID(ctx context.Context, id int64) (SessionCycle, error)
 	GetSessionCycleByStatusWithMetadata(ctx context.Context, status sql.NullString) ([]GetSessionCycleByStatusWithMetadataRow, error)
-	GetSessionCyclesBySessionID(ctx context.Context, sessionID int64) ([]SessionCycle, error)
-	GetSessionCyclesByStatus(ctx context.Context, status sql.NullString) ([]SessionCycle, error)
-	GetSessionCyclesByType(ctx context.Context, type_ sql.NullString) ([]SessionCycle, error)
-	GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.NullBool) ([]Session, error)
-	GetSessionsForDate(ctx context.Context, createdAt sql.NullTime) ([]Session, error)
 	GetTimeProfile(ctx context.Context, id int64) (TimeProfile, error)
+	ListSessionCycles(ctx context.Context, arg ListSessionCyclesParams) ([]SessionCycle, error)
+	ListSessions(ctx context.Context, arg ListSessionsParams) ([]Session, error)
 	ListTimeProfiles(ctx context.Context) ([]TimeProfile, error)
 	MarkSessionCompleted(ctx context.Context, id int64) error
 	MarkSessionCycleComplete(ctx context.Context, arg MarkSessionCycleCompleteParams) error

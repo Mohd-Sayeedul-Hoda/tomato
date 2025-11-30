@@ -46,114 +46,6 @@ func (q *Queries) DeleteSession(ctx context.Context, id int64) error {
 	return err
 }
 
-const getActiveSessions = `-- name: GetActiveSessions :many
-SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE status = 'running'
-`
-
-func (q *Queries) GetActiveSessions(ctx context.Context) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Session
-	for rows.Next() {
-		var i Session
-		if err := rows.Scan(
-			&i.ID,
-			&i.Label,
-			&i.Status,
-			&i.SessionEstimate,
-			&i.IsTracked,
-			&i.Note,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAllSessions = `-- name: GetAllSessions :many
-SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions ORDER BY created_at DESC
-`
-
-func (q *Queries) GetAllSessions(ctx context.Context) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getAllSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Session
-	for rows.Next() {
-		var i Session
-		if err := rows.Scan(
-			&i.ID,
-			&i.Label,
-			&i.Status,
-			&i.SessionEstimate,
-			&i.IsTracked,
-			&i.Note,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getCompletedSessions = `-- name: GetCompletedSessions :many
-SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE status = 'completed' ORDER BY updated_at DESC
-`
-
-func (q *Queries) GetCompletedSessions(ctx context.Context) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getCompletedSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Session
-	for rows.Next() {
-		var i Session
-		if err := rows.Scan(
-			&i.ID,
-			&i.Label,
-			&i.Status,
-			&i.SessionEstimate,
-			&i.IsTracked,
-			&i.Note,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSessionById = `-- name: GetSessionById :one
 SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE id = ?1
 `
@@ -174,48 +66,36 @@ func (q *Queries) GetSessionById(ctx context.Context, id int64) (Session, error)
 	return i, err
 }
 
-const getSessionsByTrackedStatus = `-- name: GetSessionsByTrackedStatus :many
-SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE is_tracked = ?1 ORDER BY created_at DESC
+const listSessions = `-- name: ListSessions :many
+SELECT
+  id,
+  label,
+  status,
+  session_estimate,
+  is_tracked,
+  note,
+  created_at,
+  updated_at
+FROM
+  sessions
+WHERE
+  (?1 IS NULL OR status = ?1)
+  AND
+  (?2 IS NULL OR date(created_at) = ?2)
+  AND
+  (?3 IS NULL OR is_tracked = ?3)
+ORDER BY
+  created_at DESC
 `
 
-func (q *Queries) GetSessionsByTrackedStatus(ctx context.Context, isTracked sql.NullBool) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getSessionsByTrackedStatus, isTracked)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Session
-	for rows.Next() {
-		var i Session
-		if err := rows.Scan(
-			&i.ID,
-			&i.Label,
-			&i.Status,
-			&i.SessionEstimate,
-			&i.IsTracked,
-			&i.Note,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ListSessionsParams struct {
+	Status    interface{}
+	Date      interface{}
+	IsTracked interface{}
 }
 
-const getSessionsForDate = `-- name: GetSessionsForDate :many
-SELECT id, label, status, session_estimate, is_tracked, note, created_at, updated_at FROM sessions WHERE DATE(created_at) = ?1
-`
-
-func (q *Queries) GetSessionsForDate(ctx context.Context, createdAt sql.NullTime) ([]Session, error) {
-	rows, err := q.db.QueryContext(ctx, getSessionsForDate, createdAt)
+func (q *Queries) ListSessions(ctx context.Context, arg ListSessionsParams) ([]Session, error) {
+	rows, err := q.db.QueryContext(ctx, listSessions, arg.Status, arg.Date, arg.IsTracked)
 	if err != nil {
 		return nil, err
 	}
